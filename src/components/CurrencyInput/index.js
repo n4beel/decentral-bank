@@ -2,7 +2,13 @@ import { Typography } from '@mui/material';
 import React from 'react'
 
 const CurrencyInput = (props) => {
-    const { right, balance, readOnly, value } = props;
+    const {
+        balance,
+        symbol,
+        readOnly,
+        value,
+        setValue
+    } = props;
 
     return (
         <div style={{
@@ -32,7 +38,8 @@ const CurrencyInput = (props) => {
                         fontFamily: "'Roboto Mono', monospace"
                     }}
                         readOnly={readOnly}
-                        value={value}
+                        defaultValue={readOnly ? value : null}
+                        onChange={e => setValue(e.target.value, 10)}
                         type="number"
                         placeholder='0.0' />
                 </div>
@@ -50,7 +57,7 @@ const CurrencyInput = (props) => {
                         ? <Typography sx={{
                             marginTop: '12px'
                         }} color="text.secondary">
-                            Balance : {balance}
+                            Balance : {balance} {symbol}
                         </Typography>
                         : null
                 }

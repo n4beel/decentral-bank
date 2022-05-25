@@ -7,6 +7,8 @@ import Reward from './truffle_abis/Reward.json';
 import DecentralBank from './truffle_abis/DecentralBank.json';
 
 import { ThemeProvider, createTheme } from '@mui/material/styles';
+import { toWei } from './utils/utils';
+import { CircularProgress } from '@mui/material';
 
 const darkTheme = createTheme({
   palette: {
@@ -27,7 +29,16 @@ function App() {
   const [tetherBalance, setTetherBalance] = useState(0)
   const [rewardBalance, setRewardBalance] = useState(0)
   const [stakingBalance, setStakingBalance] = useState(0)
+  const [tetherInput, setTetherInput] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [walletError, setWalletError] = useState(false)
+
+  useEffect(() => {
+    (async () => {
+      await connectWallet()
+    })()
+  }, [])
+
 
   const connectWallet = async () => {
     if (window.ethereum) {
@@ -41,6 +52,7 @@ function App() {
     }
     else {
       window.alert("No support for web3")
+      setWalletError(true)
     }
   }
 
@@ -63,7 +75,7 @@ function App() {
       setTetherBalance(_tetherBalance.toString())
     }
     else {
-      window.alert("Wrong Tether Network")
+      setWalletError(true)
     }
     if (rewardData) {
       const _reward = new web3.eth.Contract(Reward.abi, rewardData.address);
@@ -73,7 +85,7 @@ function App() {
       setRewardBalance(_rewardBalance.toString())
     }
     else {
-      window.alert("Wrong Reward Network")
+      setWalletError(true)
     }
     if (decentralBankData) {
       const _decentralBank = new web3.eth.Contract(DecentralBank.abi, decentralBankData.address);
@@ -83,29 +95,78 @@ function App() {
       setStakingBalance(_decentralBankBalance.toString())
     }
     else {
-      window.alert("Wrong Decentral Bank Network")
+      setWalletError(true)
     }
     setLoading(false)
   }
 
+  const stakeTokens = async () => {
+    setLoading(true)
+    // console.log(decentralBank._address)
+    await tether.methods.setAllowance(decentralBank._address, toWei(tetherInput))
+      .send({ from: account })
+      .on('transactionHash', async hash => {
+        console.log('approved =>', hash)
+        await decentralBank.methods.depositTokens(toWei(tetherInput))
+          .send({ from: account })
+          .on('transactionHash', hash => {
+            console.log('deposited =>', hash)
+            setLoading(false)
+          })
+      })
+  }
+
+  const unstakeTokens = async () => {
+    setLoading(true);
+    await decentralBank.methods.unstakeTokens()
+      .send({ from: account })
+      .on('transactionHash', hash => {
+        console.log('unstaked =>', hash)
+        setLoading(false)
+
+      })
+  }
+
   const navProps = {
     account,
+    walletError,
     rewardBalance,
     connectWallet
   }
 
   const cardProps = {
     tetherBalance,
-    stakingBalance
+    stakingBalance,
+    tetherInput,
+    setTetherInput,
+    stakeTokens,
+    unstakeTokens
   }
 
   return (
     <ThemeProvider theme={darkTheme}>
       <div className="App">
+
         <Navbar {...navProps} />
         <main>
           <Card {...cardProps} />
         </main>
+        {
+          loading
+          && <div style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            background: '#0008',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center'
+          }}>
+            <CircularProgress />
+          </div>
+        }
       </div>
     </ThemeProvider>
   );
